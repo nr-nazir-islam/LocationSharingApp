@@ -18,7 +18,9 @@ def get_db():
 
 def init_db():
     os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
+
     conn = get_db()
+
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS locations (
@@ -30,6 +32,7 @@ def init_db():
         )
         """
     )
+
     conn.commit()
     conn.close()
 
@@ -54,77 +57,113 @@ def index():
     return render_template("index.html")
 
 
+# LIVE LOCATION SAVE
 @app.route("/api/locations", methods=["POST"])
 def save_location():
+
     data = request.get_json(silent=True)
+
     if data is None:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    latitude, error_response, status_code = parse_coordinate(data.get("latitude"), "latitude")
-    if error_response is not None:
+
+    latitude, error_response, status_code = parse_coordinate(
+        data.get("latitude"), "latitude"
+    )
+
+    if error_response:
         return error_response, status_code
 
-    longitude, error_response, status_code = parse_coordinate(data.get("longitude"), "longitude")
-    if error_response is not None:
+
+    longitude, error_response, status_code = parse_coordinate(
+        data.get("longitude"), "longitude"
+    )
+
+    if error_response:
         return error_response, status_code
+
 
     if not (-90 <= latitude <= 90):
-        return jsonify({"error": "latitude must be between -90 and 90"}), 400
+        return jsonify({"error": "Invalid latitude"}), 400
+
 
     if not (-180 <= longitude <= 180):
-        return jsonify({"error": "longitude must be between -180 and 180"}), 400
+        return jsonify({"error": "Invalid longitude"}), 400
+
 
     accuracy = data.get("accuracy")
-    if accuracy is not None and accuracy != "":
-        accuracy, error_response, status_code = parse_coordinate(accuracy, "accuracy")
-        if error_response is not None:
-            return error_response, status_code
-        if accuracy < 0:
-            return jsonify({"error": "accuracy must be a non-negative number"}), 400
-    else:
-        accuracy = None
+
+    if accuracy is not None:
+        accuracy = float(accuracy)
+
 
     created_at = datetime.now(timezone.utc).isoformat()
 
+
     conn = get_db()
-    cursor = conn.execute(
+    cursor = conn.cursor()
+
+
+    # আগের location delete করে নতুন location save
+    cursor.execute("DELETE FROM locations")
+
+
+    cursor.execute(
         """
-        INSERT INTO locations (latitude, longitude, accuracy, created_at)
+        INSERT INTO locations
+        (latitude, longitude, accuracy, created_at)
         VALUES (?, ?, ?, ?)
         """,
-        (latitude, longitude, accuracy, created_at),
+        (
+            latitude,
+            longitude,
+            accuracy,
+            created_at
+        )
     )
+
+
     conn.commit()
-    location_id = cursor.lastrowid
     conn.close()
 
-    return jsonify(
-        {
-            "id": location_id,
-            "latitude": latitude,
-            "longitude": longitude,
-            "accuracy": accuracy,
-            "created_at": created_at,
-        }
-    ), 201
+
+    return jsonify({
+        "message": "Live location updated",
+        "latitude": latitude,
+        "longitude": longitude,
+        "accuracy": accuracy,
+        "created_at": created_at
+    }), 200
 
 
+
+# GET LOCATION FOR MAP
 @app.route("/api/locations", methods=["GET"])
 def list_locations():
+
     conn = get_db()
+
     rows = conn.execute(
         """
         SELECT id, latitude, longitude, accuracy, created_at
         FROM locations
-        ORDER BY created_at DESC
+        ORDER BY id DESC
         """
     ).fetchall()
+
     conn.close()
 
-    locations = [dict(row) for row in rows]
-    return jsonify({"locations": locations})
+
+    return jsonify({
+        "locations": [dict(row) for row in rows]
+    })
+
 
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(
+        debug=True,
+        host="0.0.0.0",
+        port=5000
+    )
