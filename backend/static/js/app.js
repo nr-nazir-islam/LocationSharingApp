@@ -1,7 +1,8 @@
 (function () {
     "use strict";
 
-    const API_URL = "https://picture-shere.onrender.com/api/locations";
+    // Same Render Flask server
+    const API_URL = "/api/locations";
 
     const errorEl = document.getElementById("error");
 
@@ -26,18 +27,28 @@
             },
 
             body: JSON.stringify({
-
                 latitude: latitude,
                 longitude: longitude,
                 accuracy: accuracy
-
             })
 
         })
 
-        .then(async response => {
+        .then(async function (response) {
 
-            const data = await response.json();
+            const text = await response.text();
+
+            let data;
+
+            try {
+                data = JSON.parse(text);
+            }
+            catch (e) {
+                throw new Error(
+                    "Server returned HTML instead of JSON"
+                );
+            }
+
 
             if (!response.ok) {
                 throw new Error(
@@ -45,13 +56,19 @@
                 );
             }
 
-            console.log("Location saved:", data);
+
+            console.log(
+                "Location saved:",
+                data
+            );
 
         })
 
-        .catch(error => {
+        .catch(function (error) {
 
-            showError(error.message);
+            showError(
+                error.message
+            );
 
         });
     }
@@ -63,31 +80,40 @@
         switch (error.code) {
 
             case error.PERMISSION_DENIED:
+
                 showError(
                     "Location permission denied"
                 );
+
                 break;
 
 
             case error.POSITION_UNAVAILABLE:
+
                 showError(
                     "Location unavailable"
                 );
+
                 break;
 
 
             case error.TIMEOUT:
+
                 showError(
                     "Location timeout"
                 );
+
                 break;
 
 
             default:
+
                 showError(
                     "Unknown location error"
                 );
+
         }
+
     }
 
 
@@ -99,11 +125,12 @@
         );
 
         return;
+
     }
 
 
 
-    // LIVE LOCATION TRACKING
+    // LIVE GPS TRACKING
 
     navigator.geolocation.watchPosition(
 
@@ -129,6 +156,7 @@
                 longitude,
                 accuracy
             );
+
 
 
             sendLocation(
