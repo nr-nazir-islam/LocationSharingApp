@@ -6,7 +6,8 @@ A minimal web application that automatically requests the user's GPS coordinates
 
 - Automatic geolocation permission request on page load
 - Plain HTML page with no styling or interactive UI
-- Send latitude, longitude, and accuracy to the Flask API
+- Only real browser-reported coordinates are accepted; no fallback or demo values are used
+- Show an error message if geolocation fails or permission is denied (nothing is sent to the server)
 - Persist locations in SQLite
 
 ## Project Structure
@@ -18,8 +19,11 @@ LocationSharingApp/
 ├── README.md               # This file
 ├── database/
 │   └── locations.db        # SQLite database (auto-created)
+├── static/
+│   └── js/
+│       └── app.js          # Geolocation client (runs on page load)
 └── templates/
-    └── index.html          # Plain HTML page with inline geolocation script
+    └── index.html          # Plain HTML page
 ```
 
 ## Prerequisites
@@ -84,9 +88,9 @@ Navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). The page automatical
 
 ```json
 {
-  "latitude": 23.8103,
-  "longitude": 90.4125,
-  "accuracy": 12.5
+  "latitude": "<browser latitude>",
+  "longitude": "<browser longitude>",
+  "accuracy": "<browser accuracy in meters>"
 }
 ```
 
@@ -95,10 +99,18 @@ Navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). The page automatical
 ```json
 {
   "id": 1,
-  "latitude": 23.8103,
-  "longitude": 90.4125,
-  "accuracy": 12.5,
+  "latitude": "<stored latitude>",
+  "longitude": "<stored longitude>",
+  "accuracy": "<stored accuracy>",
   "created_at": "2026-07-22T14:00:00+00:00"
+}
+```
+
+**Error response (400):**
+
+```json
+{
+  "error": "latitude and longitude are required"
 }
 ```
 

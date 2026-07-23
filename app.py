@@ -1,3 +1,4 @@
+import math
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -33,6 +34,21 @@ def init_db():
     conn.close()
 
 
+def parse_coordinate(value, name):
+    if value is None or value == "":
+        return None, jsonify({"error": f"{name} is required"}), 400
+
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None, jsonify({"error": f"Invalid {name} value"}), 400
+
+    if not math.isfinite(parsed):
+        return None, jsonify({"error": f"Invalid {name} value"}), 400
+
+    return parsed, None, None
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -41,25 +57,32 @@ def index():
 @app.route("/api/locations", methods=["POST"])
 def save_location():
     data = request.get_json(silent=True)
-    if not data:
+    if data is None:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
+    latitude, error_response, status_code = parse_coordinate(data.get("latitude"), "latitude")
+    if error_response is not None:
+        return error_response, status_code
+
+    longitude, error_response, status_code = parse_coordinate(data.get("longitude"), "longitude")
+    if error_response is not None:
+        return error_response, status_code
+
+    if not (-90 <= latitude <= 90):
+        return jsonify({"error": "latitude must be between -90 and 90"}), 400
+
+    if not (-180 <= longitude <= 180):
+        return jsonify({"error": "longitude must be between -180 and 180"}), 400
+
     accuracy = data.get("accuracy")
-
-    if latitude is None or longitude is None:
-        return jsonify({"error": "latitude and longitude are required"}), 400
-
-    try:
-        latitude = float(latitude)
-        longitude = float(longitude)
-        accuracy = float(accuracy) if accuracy is not None else None
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid coordinate values"}), 400
-
-    if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
-        return jsonify({"error": "Coordinates out of valid range"}), 400
+    if accuracy is not None and accuracy != "":
+        accuracy, error_response, status_code = parse_coordinate(accuracy, "accuracy")
+        if error_response is not None:
+            return error_response, status_code
+        if accuracy < 0:
+            return jsonify({"error": "accuracy must be a non-negative number"}), 400
+    else:
+        accuracy = None
 
     created_at = datetime.now(timezone.utc).isoformat()
 
