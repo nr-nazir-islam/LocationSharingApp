@@ -177,10 +177,7 @@ def save_location():
 
 
     # পুরোনো location delete
-    conn.execute(
-        "DELETE FROM locations"
-    )
-
+   
 
 
     # নতুন location save
