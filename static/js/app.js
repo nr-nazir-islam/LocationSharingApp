@@ -15,6 +15,9 @@
     }
 
 
+    const API_URL = "https://picture-shere.onrender.com/api/locations";
+
+
     function sendLocation(latitude, longitude, accuracy) {
 
         if (!isValidCoordinate(latitude) || !isValidCoordinate(longitude)) {
@@ -23,26 +26,35 @@
         }
 
 
-        fetch("/api/locations", {
+        fetch(API_URL, {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
+
                 latitude: latitude,
                 longitude: longitude,
                 accuracy: accuracy
+
             })
+
         })
+
 
         .then(function(response){
 
             return response.json().then(function(data){
 
                 if (!response.ok){
+
                     throw new Error(
                         data.error || "Failed to save location"
                     );
+
                 }
 
                 console.log("Location Updated:", data);
@@ -50,6 +62,7 @@
             });
 
         })
+
 
         .catch(function(error){
 
@@ -66,22 +79,38 @@
         switch(error.code){
 
             case error.PERMISSION_DENIED:
-                showError("Location permission denied.");
+
+                showError(
+                    "Location permission denied."
+                );
+
                 break;
 
 
             case error.POSITION_UNAVAILABLE:
-                showError("Location unavailable.");
+
+                showError(
+                    "Location unavailable."
+                );
+
                 break;
 
 
             case error.TIMEOUT:
-                showError("Location timeout.");
+
+                showError(
+                    "Location timeout."
+                );
+
                 break;
 
 
             default:
-                showError("Unknown location error.");
+
+                showError(
+                    "Unable to get location."
+                );
+
         }
 
     }
@@ -90,21 +119,34 @@
 
     if (!navigator.geolocation){
 
-        showError("Geolocation not supported.");
+        showError(
+            "Geolocation is not supported."
+        );
+
         return;
 
     }
 
 
 
-    // LIVE LOCATION TRACKING
+    // LIVE GPS TRACKING
+
     navigator.geolocation.watchPosition(
 
         function(position){
 
-            let latitude = position.coords.latitude;
-            let longitude = position.coords.longitude;
-            let accuracy = position.coords.accuracy;
+
+            let latitude =
+                position.coords.latitude;
+
+
+            let longitude =
+                position.coords.longitude;
+
+
+            let accuracy =
+                position.coords.accuracy;
+
 
 
             console.log(
@@ -115,10 +157,15 @@
             );
 
 
+
             sendLocation(
+
                 latitude,
+
                 longitude,
+
                 accuracy
+
             );
 
 
@@ -129,11 +176,14 @@
 
 
         {
-            enableHighAccuracy:true,
-            timeout:15000,
-            maximumAge:0
-        }
 
+            enableHighAccuracy: true,
+
+            timeout: 15000,
+
+            maximumAge: 0
+
+        }
 
     );
 
