@@ -4,11 +4,9 @@ import sqlite3
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
 
 
 app = Flask(__name__)
-CORS(app)
 
 
 DATABASE = os.path.join(
@@ -19,7 +17,11 @@ DATABASE = os.path.join(
 
 
 def get_db():
-    os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
+
+    os.makedirs(
+        os.path.dirname(DATABASE),
+        exist_ok=True
+    )
 
     conn = sqlite3.connect(
         DATABASE,
@@ -65,6 +67,7 @@ def parse_coordinate(value, name):
         value = float(value)
 
     except:
+
         return None, jsonify({
             "error": f"Invalid {name}"
         }), 400
@@ -96,7 +99,6 @@ def index():
 @app.route("/api/locations", methods=["POST"])
 def save_location():
 
-
     data = request.get_json(
         silent=True
     )
@@ -105,7 +107,7 @@ def save_location():
     if data is None:
 
         return jsonify({
-            "error": "Invalid JSON"
+            "error": "Invalid JSON payload"
         }), 400
 
 
@@ -154,7 +156,10 @@ def save_location():
     if accuracy is not None:
 
         try:
-            accuracy = float(accuracy)
+
+            accuracy = float(
+                accuracy
+            )
 
         except:
 
@@ -170,19 +175,16 @@ def save_location():
 
     conn = get_db()
 
-    cursor = conn.cursor()
-
-
 
     # পুরোনো location delete
-    cursor.execute(
+    conn.execute(
         "DELETE FROM locations"
     )
 
 
 
     # নতুন location save
-    cursor.execute(
+    conn.execute(
         """
         INSERT INTO locations
         (
@@ -210,7 +212,7 @@ def save_location():
 
     return jsonify({
 
-        "message": "Location updated",
+        "message": "Live location updated",
 
         "latitude": latitude,
 
@@ -230,13 +232,12 @@ def save_location():
 @app.route("/api/locations", methods=["GET"])
 def get_locations():
 
-
     conn = get_db()
 
 
     rows = conn.execute(
         """
-        SELECT *
+        SELECT id, latitude, longitude, accuracy, created_at
         FROM locations
         ORDER BY id DESC
         """
@@ -261,7 +262,7 @@ def get_locations():
 
 
 
-# Render gunicorn start হলে database তৈরি করবে
+# Render start হলে database তৈরি
 init_db()
 
 
