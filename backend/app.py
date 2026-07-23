@@ -4,20 +4,35 @@ import sqlite3
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template, request
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+CORS(app)
 
-DATABASE = os.path.join(os.path.dirname(__file__), "database", "locations.db")
+
+DATABASE = os.path.join(
+    os.path.dirname(__file__),
+    "database",
+    "locations.db"
+)
 
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
+
+    conn = sqlite3.connect(
+        DATABASE,
+        check_same_thread=False
+    )
+
     conn.row_factory = sqlite3.Row
+
     return conn
 
 
+
 def init_db():
-    os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
 
     conn = get_db()
 
@@ -37,81 +52,145 @@ def init_db():
     conn.close()
 
 
+
 def parse_coordinate(value, name):
+
     if value is None or value == "":
-        return None, jsonify({"error": f"{name} is required"}), 400
+        return None, jsonify({
+            "error": f"{name} is required"
+        }), 400
+
 
     try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return None, jsonify({"error": f"Invalid {name} value"}), 400
+        value = float(value)
 
-    if not math.isfinite(parsed):
-        return None, jsonify({"error": f"Invalid {name} value"}), 400
+    except:
+        return None, jsonify({
+            "error": f"Invalid {name}"
+        }), 400
 
-    return parsed, None, None
+
+    if not math.isfinite(value):
+
+        return None, jsonify({
+            "error": f"Invalid {name}"
+        }), 400
+
+
+    return value, None, None
+
+
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html"
+    )
 
 
-# LIVE LOCATION SAVE
+
+
+# SAVE LIVE LOCATION
 @app.route("/api/locations", methods=["POST"])
 def save_location():
 
-    data = request.get_json(silent=True)
+
+    data = request.get_json(
+        silent=True
+    )
+
 
     if data is None:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+
+        return jsonify({
+            "error": "Invalid JSON"
+        }), 400
 
 
-    latitude, error_response, status_code = parse_coordinate(
-        data.get("latitude"), "latitude"
+
+    latitude, error, code = parse_coordinate(
+        data.get("latitude"),
+        "latitude"
     )
 
-    if error_response:
-        return error_response, status_code
+    if error:
+        return error, code
 
 
-    longitude, error_response, status_code = parse_coordinate(
-        data.get("longitude"), "longitude"
+
+    longitude, error, code = parse_coordinate(
+        data.get("longitude"),
+        "longitude"
     )
 
-    if error_response:
-        return error_response, status_code
+    if error:
+        return error, code
+
 
 
     if not (-90 <= latitude <= 90):
-        return jsonify({"error": "Invalid latitude"}), 400
+
+        return jsonify({
+            "error": "Invalid latitude"
+        }), 400
+
 
 
     if not (-180 <= longitude <= 180):
-        return jsonify({"error": "Invalid longitude"}), 400
+
+        return jsonify({
+            "error": "Invalid longitude"
+        }), 400
 
 
-    accuracy = data.get("accuracy")
+
+    accuracy = data.get(
+        "accuracy"
+    )
+
 
     if accuracy is not None:
-        accuracy = float(accuracy)
+
+        try:
+            accuracy = float(accuracy)
+
+        except:
+
+            accuracy = None
 
 
-    created_at = datetime.now(timezone.utc).isoformat()
+
+    created_at = datetime.now(
+        timezone.utc
+    ).isoformat()
+
 
 
     conn = get_db()
+
     cursor = conn.cursor()
 
 
-    # আগের location delete করে নতুন location save
-    cursor.execute("DELETE FROM locations")
+
+    # পুরোনো location delete
+    cursor.execute(
+        "DELETE FROM locations"
+    )
 
 
+
+    # নতুন location save
     cursor.execute(
         """
         INSERT INTO locations
-        (latitude, longitude, accuracy, created_at)
+        (
+            latitude,
+            longitude,
+            accuracy,
+            created_at
+        )
         VALUES (?, ?, ?, ?)
         """,
         (
@@ -124,46 +203,73 @@ def save_location():
 
 
     conn.commit()
+
     conn.close()
 
 
+
     return jsonify({
-        "message": "Live location updated",
+
+        "message": "Location updated",
+
         "latitude": latitude,
+
         "longitude": longitude,
+
         "accuracy": accuracy,
+
         "created_at": created_at
+
     }), 200
 
 
 
-# GET LOCATION FOR MAP
+
+
+# GET LOCATION
 @app.route("/api/locations", methods=["GET"])
-def list_locations():
+def get_locations():
+
 
     conn = get_db()
 
+
     rows = conn.execute(
         """
-        SELECT id, latitude, longitude, accuracy, created_at
+        SELECT *
         FROM locations
         ORDER BY id DESC
         """
     ).fetchall()
 
+
     conn.close()
 
 
+
     return jsonify({
-        "locations": [dict(row) for row in rows]
+
+        "locations":
+        [
+            dict(row)
+            for row in rows
+        ]
+
     })
 
 
 
+
+
+# Render gunicorn start হলে database তৈরি করবে
+init_db()
+
+
+
 if __name__ == "__main__":
-    init_db()
+
     app.run(
-        debug=True,
         host="0.0.0.0",
-        port=5000
+        port=5000,
+        debug=True
     )
