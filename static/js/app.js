@@ -1,30 +1,21 @@
 (function () {
     "use strict";
 
-    var errorEl = document.getElementById("error");
+    const API_URL = "https://picture-shere.onrender.com/api/locations";
+
+    const errorEl = document.getElementById("error");
+
 
     function showError(message) {
         if (errorEl) {
             errorEl.textContent = message;
         }
+
+        console.error(message);
     }
-
-
-    function isValidCoordinate(value) {
-        return typeof value === "number" && Number.isFinite(value);
-    }
-
-
-    const API_URL = "https://picture-shere.onrender.com/api/locations";
 
 
     function sendLocation(latitude, longitude, accuracy) {
-
-        if (!isValidCoordinate(latitude) || !isValidCoordinate(longitude)) {
-            showError("Invalid coordinates received.");
-            return;
-        }
-
 
         fetch(API_URL, {
 
@@ -44,107 +35,90 @@
 
         })
 
+        .then(async response => {
 
-        .then(function(response){
+            const data = await response.json();
 
-            return response.json().then(function(data){
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Location save failed"
+                );
+            }
 
-                if (!response.ok){
-
-                    throw new Error(
-                        data.error || "Failed to save location"
-                    );
-
-                }
-
-                console.log("Location Updated:", data);
-
-            });
+            console.log("Location saved:", data);
 
         })
 
-
-        .catch(function(error){
+        .catch(error => {
 
             showError(error.message);
 
         });
-
     }
 
 
 
-    function handleGeolocationError(error){
+    function getLocationError(error) {
 
-        switch(error.code){
+        switch (error.code) {
 
             case error.PERMISSION_DENIED:
-
                 showError(
-                    "Location permission denied."
+                    "Location permission denied"
                 );
-
                 break;
 
 
             case error.POSITION_UNAVAILABLE:
-
                 showError(
-                    "Location unavailable."
+                    "Location unavailable"
                 );
-
                 break;
 
 
             case error.TIMEOUT:
-
                 showError(
-                    "Location timeout."
+                    "Location timeout"
                 );
-
                 break;
 
 
             default:
-
                 showError(
-                    "Unable to get location."
+                    "Unknown location error"
                 );
-
         }
-
     }
 
 
 
-    if (!navigator.geolocation){
+    if (!navigator.geolocation) {
 
         showError(
-            "Geolocation is not supported."
+            "Browser does not support GPS"
         );
 
         return;
-
     }
 
 
 
-    // LIVE GPS TRACKING
+    // LIVE LOCATION TRACKING
 
     navigator.geolocation.watchPosition(
 
-        function(position){
+        function (position) {
 
 
-            let latitude =
+            const latitude =
                 position.coords.latitude;
 
 
-            let longitude =
+            const longitude =
                 position.coords.longitude;
 
 
-            let accuracy =
+            const accuracy =
                 position.coords.accuracy;
 
 
@@ -157,22 +131,17 @@
             );
 
 
-
             sendLocation(
-
                 latitude,
-
                 longitude,
-
                 accuracy
-
             );
 
 
         },
 
 
-        handleGeolocationError,
+        getLocationError,
 
 
         {
